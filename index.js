@@ -1,6 +1,8 @@
 var Promise = require('bluebird');
 var glob = Promise.promisify(require('glob'));
 var path = require('path');
+var fs = require('fs');
+var logger = require('loginator')('usageify');
 
 var files = new Set();
 var runningCount = 0;
@@ -13,6 +15,7 @@ module.exports = function (browserify, opts) {
 		sourceFilesPromise = Promise.all(opts.patterns.map(p => glob(p)))
 		.then(results => [].concat.apply([], results))
 		.mapSeries(item => path.resolve(item))
+		.filter(item => fs.lstatSync(item).isFile())
 		.then(results => new Set(results));
 	}
 
@@ -31,18 +34,21 @@ module.exports = function (browserify, opts) {
 		runningCount--;
 
 		if(runningCount === 0) {
-			console.log('[usageify] Usage Report ');
+			logger.info('Usage Report ');
 
 			// compare to source files
 			sourceFilesPromise.then(sources => {
 
-				console.log('[usageify]', sources.size, 'source files');
-				console.log('[usageify]', files.size, 'required files');
-				console.log('[usageify] The following files dont seem to be required by any browserify bundles.');
+				logger.info(sources.size, 'source files');
+				logger.info(files.size, 'required files');
 
 				return Array.from(sources).filter(s => !files.has(s))
 			})
-			.each(item => console.log(`\t${item}`));
+			.then(unusedFiles => {
+				if(unusedFiles.length) 
+					logger.info('The following files dont seem to be required by any browserify bundles.');
+				unusedFiles.forEach(item => logger.info(`\t${item}`));
+			});
 		}
 
 	});
