@@ -2,7 +2,8 @@ var Promise = require('bluebird');
 var glob = Promise.promisify(require('glob'));
 var path = require('path');
 var fs = require('fs');
-var logger = require('loginator')('usageify');
+require('loginator');
+var logger = console.logger('usageify');
 
 var files = new Set();
 var runningCount = 0;
@@ -45,7 +46,7 @@ module.exports = function (browserify, opts) {
 				return Array.from(sources).filter(s => !files.has(s))
 			})
 			.then(unusedFiles => {
-				if(unusedFiles.length) 
+				if(unusedFiles.length)
 					logger.info('The following files dont seem to be required by any browserify bundles.');
 				unusedFiles.forEach(item => logger.info(`\t${item}`));
 			});
